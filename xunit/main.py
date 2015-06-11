@@ -5,24 +5,80 @@ class TestCase:
         pass
     def tearDown(self):
         pass
-    def run(self):
+    def run(self, result):
+        result.testStarted()
         self.setUp()
-        method = getattr(self, self.name)
-        method()
+        try:
+            method = getattr(self, self.name)
+            method()
+        except:
+            result.testFailed()
         self.tearDown()
+
+class TestResult:
+    def __init__(self):
+        self.runCount = 0
+        self.errorCount = 0
+    def testStarted(self):
+        self.runCount = self.runCount + 1
+    def testFailed(self):
+        self.errorCount = self.errorCount + 1
+    def summary(self):
+        return "%d run, %d failed" % (self.runCount, self.errorCount)
+
+class TestSuite:
+    def __init__(self):
+        self.tests = []
+    def add(self, test):
+        self.tests.append(test)
+    def run(self, result):
+        for test in self.tests:
+            test.run(result)
 
 class WasRun(TestCase):
     def setUp(self):
         self.log = "setUp "
     def testMethod(self):
         self.log = self.log + "testMethod "
+    def testBrokenMethod(self):
+        raise Exception
     def tearDown(self):
         self.log = self.log + "tearDown "
 
 class TestCaseTest(TestCase):
     def testTemplateMethod(self):
         test = WasRun("testMethod")
-        test.run()
+        result = TestResult()
+        test.run(result)
         assert "setUp testMethod tearDown " == test.log
+    def testResult(self):
+        test = WasRun("testMethod")
+        result = TestResult()
+        test.run(result)
+        assert "1 run, 0 failed" == result.summary()
+    def testBrokenMethod(self):
+        test = WasRun("testBrokenMethod")
+        result = TestResult()
+        test.run(result)
+        assert "1 run, 1 failed" == result.summary()
+    def testFailedResultFormatting(self):
+        result = TestResult()
+        result.testStarted()
+        result.testFailed()
+        assert "1 run, 1 failed" == result.summary()
+    def testSuite(self):
+        suite = TestSuite()
+        result = TestResult()
+        suite.add(WasRun("testMethod"))
+        suite.add(WasRun("testBrokenMethod"))
+        suite.run(result)
+        assert "2 run, 1 failed" == result.summary()
 
-TestCaseTest("testTemplateMethod").run()
+suite = TestSuite()
+result = TestResult()
+suite.add(TestCaseTest("testTemplateMethod"))
+suite.add(TestCaseTest("testResult"))
+suite.add(TestCaseTest("testFailedResultFormatting"))
+suite.add(TestCaseTest("testSuite"))
+suite.run(result)
+print result.summary()
