@@ -82,3 +82,4 @@ suite.add(TestCaseTest("testFailedResultFormatting"))
 suite.add(TestCaseTest("testSuite"))
 suite.run(result)
 print result.summary()
+
